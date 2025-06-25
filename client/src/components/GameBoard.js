@@ -1,4 +1,5 @@
 import React from 'react';
+import audioManager from '../utils/audioManager';
 
 const GameBoard = ({ board, onMove, isYourTurn, gameFinished, winningLine }) => {
   const handleCellClick = (index) => {
@@ -32,7 +33,17 @@ const GameBoard = ({ board, onMove, isYourTurn, gameFinished, winningLine }) => 
           <div
             key={index}
             className={getCellClass(index)}
-            onClick={() => handleCellClick(index)}
+            onClick={() => {
+              if (!board[index] && isYourTurn && !gameFinished) {
+                audioManager.play('click');
+                handleCellClick(index);
+              }
+            }}
+            onMouseEnter={() => {
+              if (!board[index] && isYourTurn && !gameFinished) {
+                audioManager.play('hover');
+              }
+            }}
           >
             {cell}
           </div>

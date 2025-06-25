@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import audioManager from '../utils/audioManager';
 
 const PlayerInput = ({ onJoinQueue }) => {
   const [name, setName] = useState('');
@@ -19,10 +20,17 @@ const PlayerInput = ({ onJoinQueue }) => {
           placeholder="Your name..."
           value={name}
           onChange={(e) => setName(e.target.value)}
+          onFocus={() => audioManager.play('hover')}
           maxLength={20}
           required
         />
-        <button type="submit">Join Game</button>
+        <button 
+          type="submit"
+          onClick={() => audioManager.play('click')}
+          onMouseEnter={() => audioManager.play('hover')}
+        >
+          Join Game
+        </button>
       </form>
     </div>
   );
