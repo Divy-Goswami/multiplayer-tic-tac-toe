@@ -1,7 +1,7 @@
 import React from 'react';
 import audioManager from '../utils/audioManager';
 
-const GameBoard = ({ board, onMove, isYourTurn, gameFinished, winningLine }) => {
+const GameBoard = ({ board, onMove, isYourTurn, gameFinished, winningLine, gridSize = 3 }) => {
   const handleCellClick = (index) => {
     if (!board[index] && isYourTurn && !gameFinished) {
       onMove(index);
@@ -28,7 +28,13 @@ const GameBoard = ({ board, onMove, isYourTurn, gameFinished, winningLine }) => 
 
   return (
     <div className="game-board">
-      <div className="board">
+      <div 
+        className={`board grid-${gridSize}x${gridSize}`}
+        style={{
+          gridTemplateColumns: `repeat(${gridSize}, 1fr)`,
+          gridTemplateRows: `repeat(${gridSize}, 1fr)`
+        }}
+      >
         {board.map((cell, index) => (
           <div
             key={index}

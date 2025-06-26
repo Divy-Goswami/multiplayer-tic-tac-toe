@@ -5,14 +5,19 @@ import GameBoard from './components/GameBoard';
 import PlayerInput from './components/PlayerInput';
 import GameStatus from './components/GameStatus';
 import SoundControls from './components/SoundControls';
+import GridSizeSelector from './components/GridSizeSelector';
+import GameLobby from './components/GameLobby';
 import audioManager from './utils/audioManager';
 
 const socket = io('http://localhost:5000');
 
 function App() {
-  const [gameState, setGameState] = useState('waiting-for-name'); // waiting-for-name, waiting-for-opponent, playing, finished
+  const [gameState, setGameState] = useState('waiting-for-name'); // waiting-for-name, grid-selection, lobby, waiting-for-opponent, playing, finished
   const [playerName, setPlayerName] = useState('');
+  const [gridSize, setGridSize] = useState(3);
   const [gameData, setGameData] = useState(null);
+  const [lobbyData, setLobbyData] = useState(null);
+  const [isHost, setIsHost] = useState(false);
   const [yourSymbol, setYourSymbol] = useState(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -112,6 +117,30 @@ function App() {
       audioManager.play('notification');
     });
 
+    socket.on('lobby-joined', (data) => {
+      setGameState('lobby');
+      setLobbyData(data);
+      setIsHost(data.isHost[socket.id]);
+      setMessage('Matched with an opponent! Choose your grid size.');
+      audioManager.play('matchFound');
+    });
+
+    socket.on('lobby-update', (data) => {
+      setLobbyData(prevData => ({
+        ...prevData,
+        players: data.players,
+        status: data.status,
+        agreedGridSize: data.agreedGridSize
+      }));
+    });
+
+    socket.on('opponent-left-lobby', () => {
+      setMessage('Your opponent left the lobby.');
+      setGameState('waiting-for-name');
+      setLobbyData(null);
+      audioManager.play('notification');
+    });
+
     socket.on('error', (errorMessage) => {
       setError(errorMessage);
       audioManager.play('error');
@@ -131,7 +160,15 @@ function App() {
 
   const handleJoinQueue = (name) => {
     setPlayerName(name);
-    socket.emit('join-queue', name);
+    setGameState('grid-selection');
+  };
+
+  const handleGridSizeSelect = (size) => {
+    setGridSize(size);
+    socket.emit('join-queue', { 
+      name: playerName, 
+      gridSize: size 
+    });
   };
 
   const handleMove = (position) => {
@@ -145,6 +182,24 @@ function App() {
 
   const handlePlayAgain = () => {
     socket.emit('play-again');
+  };
+
+  const handleLobbyGridSizeChange = (size) => {
+    setGridSize(size);
+    socket.emit('lobby-grid-size-change', { gridSize: size });
+  };
+
+  const handleStartGameFromLobby = () => {
+    socket.emit('start-game-from-lobby');
+  };
+
+  const handleLeaveLobby = () => {
+    socket.emit('leave-lobby');
+    setGameState('waiting-for-name');
+    setLobbyData(null);
+    setPlayerName('');
+    setMessage('');
+    setError('');
   };
 
   const handleLeaveGame = () => {
@@ -164,6 +219,25 @@ function App() {
         
         {gameState === 'waiting-for-name' && (
           <PlayerInput onJoinQueue={handleJoinQueue} />
+        )}
+        
+        {gameState === 'grid-selection' && (
+          <GridSizeSelector 
+            onGridSizeSelect={handleGridSizeSelect}
+            selectedSize={gridSize}
+          />
+        )}
+        
+        {gameState === 'lobby' && lobbyData && (
+          <GameLobby
+            playerName={playerName}
+            selectedGridSize={gridSize}
+            onGridSizeChange={handleLobbyGridSizeChange}
+            onStartGame={handleStartGameFromLobby}
+            onLeaveLobby={handleLeaveLobby}
+            lobbyData={lobbyData}
+            isHost={isHost}
+          />
         )}
         
         {gameState === 'waiting-for-opponent' && (
@@ -189,6 +263,7 @@ function App() {
               isYourTurn={gameData.currentPlayer === socket.id}
               gameFinished={gameState === 'finished'}
               winningLine={gameData.winningLine}
+              gridSize={gameData.gridSize || gridSize}
             />
             
             {gameState === 'finished' && (
